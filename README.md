@@ -11,16 +11,42 @@ const client = new Discord.Client();
 
 client.login("TOKEN");
 
-new api(client, "YT API TOKEN", { prefix: "-", anyoneCanSkip: false });
+new api(client, "YT API KEY", { prefix: "-", anyoneCanSkip: true, autoHandle: true, autoLeaveTime: 30000 });
+```
+
+If you wish to use this module by handling the commands yourself, we change the `autoHandle` option to false, here is an example:
+
+```js
+const api = require("doyle-music");
+const Discord = require("discord.js");
+const client = new Discord.Client();
+const prefix = "!";
+
+client.login("TOKEN");
+
+const music = new api(client, "YT API KEY", { prefix: "-", anyoneCanSkip: true, autoHandle: false, autoLeaveTime: 30000 });
+
+client.on("message", message => {
+  let args = message.content.split(" ");
+  const command = args[0].slice(prefix.length);
+  args = args.join(" ").slice(command.length + this.prefix.length).trim().split(" ");
+  
+  if (command === "play") {
+      music.play(client, message, args);
+  }
+})
 ```
 
 That's all you need to do to get started, but make sure you have ffmpeg and node-opus installed, simply running `npm i node-opus ffmpeg-binaries` will do it!
 
 ## Avaiable Options:
-| options       | type    | description                                                                    |  
-|---------------|---------|--------------------------------------------------------------------------------|
-| prefix        | String  | The prefix the music bot should use.                                           |     
-| anyoneCanSkip | Boolean | Whether or not anyone can skip, if set to false, only Administrators can skip. |    
+| options          | type    | description                                                                                                                              | 
+|------------------|---------|------------------------------------------------------------------------------------------------------------------------------------------|
+| prefix           | String  | The prefix the music bot should use.                                                                                                     | 
+| anyoneCanSkip    | Boolean | Whether or not anyone can skip, if set to false, only Administrators can skip.                                                           | 
+| autoHandle       | Boolean | Whether or not the client handles everything for you, if set to false, you can handle commands yourself using the functions documented.  | 
+| autoLeaveTime    | Number  | How long to wait untill the client leaves the voice channel automatically if no one is in the call, in milliseconds. Default: 30 seconds.|    
+   
 
 ## Available commands:
 `loop` | loops the current playing stream

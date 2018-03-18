@@ -24,7 +24,7 @@
 <label for="nav-trigger" class="overlay"></label>
 
 <nav>
-    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Music.html">Music</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#embed">embed</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#handleVideo">handleVideo</a></span></li>
+    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Music.html">Music</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#loop">loop</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#np">np</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#pause">pause</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#play">play</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#queue">queue</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#resume">resume</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#search">search</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#skip">skip</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#stop">stop</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#volume">volume</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#embed">embed</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#handleVideo">handleVideo</a></span></li>
 </nav>
 
 <div id="main">
@@ -55,7 +55,25 @@ const client = new Discord.Client();
 
 client.login(&quot;TOKEN&quot;);
 
-new api(client, &quot;YT API TOKEN&quot;, { prefix: &quot;-&quot;, anyoneCanSkip: false });</code></pre><p>That's all you need to do to get started, but make sure you have ffmpeg and node-opus installed, simply running <code>npm i node-opus ffmpeg-binaries</code> will do it!</p>
+new api(client, &quot;YT API KEY&quot;, { prefix: &quot;-&quot;, anyoneCanSkip: true, autoHandle: true, autoLeaveTime: 30000 });</code></pre><p>If you wish to use this module by handling the commands yourself, we change the <code>autoHandle</code> option to false, here is an example:</p>
+<pre class="prettyprint source lang-js"><code>const api = require(&quot;doyle-music&quot;);
+const Discord = require(&quot;discord.js&quot;);
+const client = new Discord.Client();
+const prefix = &quot;!&quot;;
+
+client.login(&quot;TOKEN&quot;);
+
+const music = new api(client, &quot;YT API KEY&quot;, { prefix: &quot;-&quot;, anyoneCanSkip: true, autoHandle: false, autoLeaveTime: 30000 });
+
+client.on(&quot;message&quot;, message => {
+  let args = message.content.split(&quot; &quot;);
+  const command = args[0].slice(prefix.length);
+  args = args.join(&quot; &quot;).slice(command.length + this.prefix.length).trim().split(&quot; &quot;);
+
+  if (command === &quot;play&quot;) {
+      music.play(client, message, args);
+  }
+})</code></pre><p>That's all you need to do to get started, but make sure you have ffmpeg and node-opus installed, simply running <code>npm i node-opus ffmpeg-binaries</code> will do it!</p>
 <h2>Avaiable Options:</h2><table>
 <thead>
 <tr>
@@ -74,6 +92,16 @@ new api(client, &quot;YT API TOKEN&quot;, { prefix: &quot;-&quot;, anyoneCanSkip
 <td>anyoneCanSkip</td>
 <td>Boolean</td>
 <td>Whether or not anyone can skip, if set to false, only Administrators can skip.</td>
+</tr>
+<tr>
+<td>autoHandle</td>
+<td>Boolean</td>
+<td>Whether or not the client handles everything for you, if set to false, you can handle commands yourself using the functions documented.</td>
+</tr>
+<tr>
+<td>autoLeaveTime</td>
+<td>Number</td>
+<td>How long to wait untill the client leaves the voice channel automatically if no one is in the call, in milliseconds. Default: 30 seconds.</td>
 </tr>
 </tbody>
 </table>
@@ -100,7 +128,7 @@ new api(client, &quot;YT API TOKEN&quot;, { prefix: &quot;-&quot;, anyoneCanSkip
 <br class="clear">
 
 <footer>
-    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Mar 18 2018 14:33:56 GMT+0000 (GMT Standard Time) using the Minami theme.
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Mar 18 2018 22:11:33 GMT+0000 (GMT Standard Time) using the Minami theme.
 </footer>
 
 <script>prettyPrint();</script>

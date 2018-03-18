@@ -24,7 +24,7 @@
 <label for="nav-trigger" class="overlay"></label>
 
 <nav>
-    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Music.html">Music</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#embed">embed</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#handleVideo">handleVideo</a></span></li>
+    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Music.html">Music</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#loop">loop</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#np">np</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#pause">pause</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#play">play</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#queue">queue</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#resume">resume</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#search">search</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#skip">skip</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#stop">stop</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Music.html#volume">volume</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#embed">embed</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#handleVideo">handleVideo</a></span></li>
 </nav>
 
 <div id="main">
@@ -52,7 +52,7 @@ class Music {
     * @example
     * // an example of initiating the music client
     * const MusicApi = require("doyle-music");
-    * const API = new MusicAPI(client, "yt api token", { prefix: "!", anyoneCanSkip: true });
+    * const music = new api(client, "YT API KEY", { prefix: "-", anyoneCanSkip: true, autoHandle: false, autoLeaveTime: 30000 });
     */
 
   constructor(client, token, options) {
@@ -67,8 +67,12 @@ class Music {
     if (typeof this.prefix !== "string") throw new Error("Prefix must be a string!");
     this.anyoneCanSkip = (options &amp;&amp; options.anyoneCanSkip) || false;
     if (typeof this.anyoneCanSkip !== "boolean") throw new Error("anyoneCanSkip must be a boolean!");
+    this.autoHandle = (options &amp;&amp; options.autoHandle) || false;
+    if (typeof this.autoHandle !== "boolean") throw new Error("autoHandle must be a boolean!");
+    this.client.autoLeaveTime = (options &amp;&amp; options.autoLeaveTime) || 30000;
+    if (typeof this.client.autoLeaveTime !== "number") throw new Error("autoLeaveTime must be a number!");
     if (options &amp;&amp; typeof options !== "object") throw new Error("Options must be an object!");
-    this.ytapi = new youtube(token);
+    this.client.ytapi = new youtube(token);
     this.client.playlists = new Discord.Collection();
 
     this.client.on("ready", () => {
@@ -76,172 +80,276 @@ class Music {
     });
 
     this.client.on("message", async message => {
+      if (!this.autoHandle) return;
       if (!message.content.startsWith(this.prefix)) return;
       let args = message.content.split(" ");
       const command = args[0].slice(this.prefix.length);
       args = args.join(" ").slice(command.length + this.prefix.length).trim().split(" ");
 
-
       if (command === "play") {
-        const url = args[0] ? args[0].replace(/&lt;(.+)>/g, "$1") : "";
-        const voiceChannel = message.member.voiceChannel;
-        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
-        if (!args[0]) return this.client.embed("noArgs", message);
-        const permissions = voiceChannel.permissionsFor(message.client.user);
-        if (!permissions.has("CONNECT")) return this.client.embed("noPerms-CONNECT", message);
-        if (!permissions.has("SPEAK")) return this.client.embed("noPerms-SPEAK", message);
-        if (url.match(/^https?:\/\/(www.youtube.com|youtube.com)\/playlist(.*)$/)) {
-          const playlist = await this.ytapi.getPlaylist(url);
-          const videos = await playlist.getVideos();
-          for (const video of Object.values(videos)) {
-            const video2 = await this.ytapi.getVideoByID(video.id); // eslint-disable-line no-await-in-loop
-            await handleVideo(video2, message, voiceChannel, true); // eslint-disable-line no-await-in-loop
-          }
-          const embed = new Discord.MessageEmbed()
-            .setAuthor("Playlist")
-            .setDescription(`✅ Playlist: **${playlist.title}** has been added to the queue!`)
-            .setColor(message.guild.me.roles.highest.color || 0x00AE86);
-          message.channel.send({ embed: embed });
-        } else {
-          let video;
-          try {
-            video = await this.ytapi.getVideo(url);
-          } catch (error) {
-            const videos = await this.ytapi.searchVideos(args.join(" "), 1);
-            video = await this.ytapi.getVideoByID(videos[0].id);   
-          }
-          return handleVideo(video, message, voiceChannel);
-        }
+        this.play(this.client, message, args);
       }
 
       if (command === "skip") {
-        const voiceChannel = message.member.voiceChannel;
-        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
-        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
-        const thisPlaylist = this.client.playlists.get(message.guild.id);
-        thisPlaylist.loop = false;
-        thisPlaylist.connection.dispatcher.end("skip");
-        return this.client.embed("skipped", message);
+        this.skip(this.client, message);
       }
 
       if (command === "loop" || command === "unloop") {
-        const voiceChannel = message.member.voiceChannel;
-        const thisPlaylist = this.client.playlists.get(message.guild.id);
-        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
-        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
-        if (thisPlaylist.loop) {
-          thisPlaylist.loop = false;
-          return this.client.embed("unloopedEmbed", message);
-        } else {
-          thisPlaylist.loop = true;
-          return this.client.embed("loopedEmbed", message);
-        }
+        this.loop(this.client, message);
       }
 
       if (command === "np" || command === "nowplaying" || command === "currentsong") {
-        const voiceChannel = message.member.voiceChannel;
-        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
-        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
-        return this.client.embed("nowPlaying", message);
+        this.np(this.client, message);
       }
 
       if (command === "queue" || command === "playlist") {
-        const voiceChannel = message.member.voiceChannel;
-        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
-        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
-        return this.client.embed("queueEmbed", message);
+        this.queue(client, message);
       }
 
       if (command === "pause") {
-        const voiceChannel = message.member.voiceChannel;
-        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
-        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);    
-        const thisPlaylist = this.client.playlists.get(message.guild.id);
-        if (!thisPlaylist.playing) return this.client.embed("alreadyPaused", message);   
-        thisPlaylist.playing = false;
-        thisPlaylist.connection.dispatcher.pause();
-        return this.client.embed("paused", message);   
+        this.pause(client, message);
       }
 
       if (command === "resume") {
-        const voiceChannel = message.member.voiceChannel;
-        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
-        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
-        const thisPlaylist = this.client.playlists.get(message.guild.id);
-        if (thisPlaylist.playing) return this.client.embed("alreadyResumed", message);
-        thisPlaylist.playing = true;
-        thisPlaylist.connection.dispatcher.resume();
-        return this.client.embed("resumed", message);
+        this.resume(client, message);
       } 
 
       if (command === "search") {
-        const voiceChannel = message.member.voiceChannel;
-        const permissions = voiceChannel.permissionsFor(message.client.user);
-        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
-        if (!args[0]) return this.client.embed("noArgs", message);
-        if (!permissions.has("CONNECT")) return this.client.embed("noPerms-CONNECT", message);
-        if (!permissions.has("SPEAK")) return this.client.embed("noPerms-SPEAK");
-        let video;
-        try {
-          const videos = await youtube.searchVideos(args.join(" "), 10);
-          let index = 0;
-          const embed = new Discord.MessageEmbed()
-            .setAuthor("Song Selection")
-            .setDescription(`${videos.map(video2 => `**${++index} -** ${video2.title}`).join("\n")}`)
-            .setFooter("Please provide a value to select one of the search results ranging from 1-10.")
-            .setColor(message.guild.me.roles.highest.color || 0x00AE86);
-          message.channel.send({ embed: embed });
-          const response = await message.channel.awaitMessages(msg2 => (msg2.content > 0 &amp;&amp; msg2.content &lt; 11) &amp;&amp; msg2.author.id === message.author.id, {
-            max: 1,
-            time: 10000,
-            errors: ["time"]
-          });
-          if (!response) return this.client.embed("invalidEntry", message);
-          const videoIndex = parseInt(response.first().content);
-          video = await youtube.getVideoByID(videos[videoIndex - 1].id);
-        } catch (err) {
-          return this.client.embed("noSearchResults", message);
-        }
-        return handleVideo(video, message, voiceChannel);
+        this.search(client, message, args);
       }
 
       if (command === "stop") {
-        const voiceChannel = message.member.voiceChannel;
-        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
-        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
-        const thisPlaylist = this.client.playlists.get(message.guild.id);
-        thisPlaylist.songs = [];
-        thisPlaylist.connection.dispatcher.end();
-        return this.client.embed("stopped", message);
+        this.stop(client, message);
       }
       if (command === "volume") {
-        if (this.anyoneCanSkip) { 
-          const voiceChannel = message.member.voiceChannel;
-          if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
-          if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
-          if (!args[0]) return this.client.embed("currentVolume", message);
-          if (Number(args[0]) &lt; 0 || Number(args[0]) > 100) return this.client.embed("errorVolume", message);
-          message.guild.voiceConnection.volume = Number(args[0]) / 100;
-          this.client.playlists.get(message.guild.id).volume = Number(args[0]);
-          this.client.playlists.get(message.guild.id).connection.dispatcher.setVolumeLogarithmic(Number(args[0]) / 100);
-          return this.client.embed("volumeSet", message, args);
-        } else {
-          if (message.member.hasPermission("ADMINISTRATOR")) {
-            const voiceChannel = message.member.voiceChannel;
-            if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
-            if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
-            if (!args[0]) return this.client.embed("currentVolume", message);
-            if (Number(args[0]) &lt; 0 || Number(args[0]) > 100) return this.client.embed("errorVolume", message);
-            message.guild.voiceConnection.volume = Number(args[0]) / 100;
-            this.client.playlists.get(message.guild.id).volume = Number(args[0]);
-            this.client.playlists.get(message.guild.id).connection.dispatcher.setVolumeLogarithmic(Number(args[0]) / 100);
-            return this.client.embed("volumeSet", message, args);  
-          } else {
-            return this.client.embed("noPerms-ADMINISTRATOR", message);
-          }
-        }
+        this.volume(client, message, args);
       }
     });
+  }
+
+  /**
+   * @param {DiscordClient} client The discord.js client
+   * @param {DiscordMessage} message The message sent, a discord.js message object
+   * @param {Array} [args = []] The arguments, look at the example for more information
+   * @description This will handle all of the stuff to play a song using a video id, url or name
+   */
+
+  async play(client, message, args = []) {
+    const url = args[0] ? args[0].replace(/&lt;(.+)>/g, "$1") : "";
+    const voiceChannel = message.member.voiceChannel;
+    if (!voiceChannel) return client.embed("noVoiceChannel", message);
+    if (!args[0]) return client.embed("noArgs", message);
+    const permissions = voiceChannel.permissionsFor(client.user);
+    if (!permissions.has("CONNECT")) return client.embed("noPerms-CONNECT", message);
+    if (!permissions.has("SPEAK")) return client.embed("noPerms-SPEAK", message);
+    if (url.match(/^https?:\/\/(www.youtube.com|youtube.com)\/playlist(.*)$/)) {
+      const playlist = await client.ytapi.getPlaylist(url);
+      const videos = await playlist.getVideos();
+      for (const video of Object.values(videos)) {
+        const video2 = await client.ytapi.getVideoByID(video.id); // eslint-disable-line no-await-in-loop
+        await handleVideo(video2, message, voiceChannel, true); // eslint-disable-line no-await-in-loop
+      }
+      const embed = new Discord.MessageEmbed()
+        .setAuthor("Playlist")
+        .setDescription(`✅ Playlist: **${playlist.title}** has been added to the queue!`)
+        .setColor(message.guild.me.roles.highest.color || 0x00AE86);
+      message.channel.send({ embed: embed });
+    } else {
+      let video;
+      try {
+        video = await client.ytapi.getVideo(url);
+      } catch (error) {
+        const videos = await client.ytapi.searchVideos(args.join(" "), 1);
+        video = await client.ytapi.getVideoByID(videos[0].id);   
+      }
+      return handleVideo(video, message, voiceChannel);
+    }
+  }
+
+  /**
+   * @param {DiscordClient} client The discord.js client
+   * @param {DiscordMessage} message The message sent, a discord.js message object
+   * @description If a song is playing, this will skip it
+   */
+
+
+  skip(client, message) {
+    if (!this.anyoneCanSkip &amp;&amp; message.member.hasPermission("ADMINISTRATOR")) return client.embed("noPerms-ADMINISTRATOR", message); 
+    const voiceChannel = message.member.voiceChannel;
+    if (!voiceChannel) return client.embed("noVoiceChannel", message);
+    if (!client.playlists.has(message.guild.id)) return client.embed("emptyQueue", message);
+    const thisPlaylist = client.playlists.get(message.guild.id);
+    thisPlaylist.loop = false;
+    thisPlaylist.connection.dispatcher.end("skip");
+    return client.embed("skipped", message);
+  }
+
+  /**
+   * @param {DiscordClient} client The discord.js client
+   * @param {DiscordMessage} message The message sent, a discord.js message object
+   * @description If there is a song playing, this will loop it
+   */
+
+  loop(client, message) {
+    const voiceChannel = message.member.voiceChannel;
+    const thisPlaylist = client.playlists.get(message.guild.id);
+    if (!voiceChannel) return client.embed("noVoiceChannel", message);
+    if (!client.playlists.has(message.guild.id)) return client.embed("emptyQueue", message);
+    if (thisPlaylist.loop) {
+      thisPlaylist.loop = false;
+      return client.embed("unloopedEmbed", message);
+    } else {
+      thisPlaylist.loop = true;
+      return client.embed("loopedEmbed", message);
+    }
+  }
+
+  /**
+   * @param {DiscordClient} client The discord.js client
+   * @param {DiscordMessage} message The message sent, a discord.js message object
+   * @description This will display the current playing song
+   */
+
+
+  np(client, message) {
+    const voiceChannel = message.member.voiceChannel;
+    if (!voiceChannel) return client.embed("noVoiceChannel", message);
+    if (!client.playlists.has(message.guild.id)) return client.embed("emptyQueue", message);
+    return client.embed("nowPlaying", message);
+  }
+
+  /**
+   * @param {DiscordClient} client The discord.js client
+   * @param {DiscordMessage} message The message sent, a discord.js message object
+   * @param {Array} [args = []] The arguments, look at the example for more information
+   * @description If there is a current song, this will pause it
+   */
+
+
+  pause(client, message) {
+    const voiceChannel = message.member.voiceChannel;
+    if (!voiceChannel) return client.embed("noVoiceChannel", message);
+    if (!client.playlists.has(message.guild.id)) return client.embed("emptyQueue", message);    
+    const thisPlaylist = client.playlists.get(message.guild.id);
+    if (!thisPlaylist.playing) return client.embed("alreadyPaused", message);   
+    thisPlaylist.playing = false;
+    thisPlaylist.connection.dispatcher.pause();
+    return client.embed("paused", message);  
+  }
+
+  /**
+   * @param {DiscordClient} client The discord.js client
+   * @param {DiscordMessage} message The message sent, a discord.js message object
+   * @description This will display the current playing songs
+   */
+
+
+  queue(client, message) {
+    const voiceChannel = message.member.voiceChannel;
+    if (!voiceChannel) return client.embed("noVoiceChannel", message);
+    if (!client.playlists.has(message.guild.id)) return client.embed("emptyQueue", message);
+    return client.embed("queueEmbed", message);
+  }
+
+  /**
+   * @param {DiscordClient} client The discord.js client
+   * @param {DiscordMessage} message The message sent, a discord.js message object
+   * @description If the current song is paused, it will resume it
+   */
+
+
+  resume(client, message) {
+    const voiceChannel = message.member.voiceChannel;
+    if (!voiceChannel) return client.embed("noVoiceChannel", message);
+    if (!client.playlists.has(message.guild.id)) return client.embed("emptyQueue", message);
+    const thisPlaylist = client.playlists.get(message.guild.id);
+    if (thisPlaylist.playing) return client.embed("alreadyResumed", message);
+    thisPlaylist.playing = true;
+    thisPlaylist.connection.dispatcher.resume();
+    return client.embed("resumed", message);
+  }
+
+  /**
+   * @param {DiscordClient} client The discord.js client
+   * @param {DiscordMessage} message The message sent, a discord.js message object
+   * @param {Array} [args = []] The arguments, look at the example for more information
+   * @description This will display a list of 10 songs based on searches and allow you to choose one
+   */
+
+  async search(client, message, args) {
+    const voiceChannel = message.member.voiceChannel;
+    const permissions = voiceChannel.permissionsFor(client.user);
+    if (!voiceChannel) return client.embed("noVoiceChannel", message);
+    if (!args[0]) return client.embed("noArgs", message);
+    if (!permissions.has("CONNECT")) return client.embed("noPerms-CONNECT", message);
+    if (!permissions.has("SPEAK")) return client.embed("noPerms-SPEAK");
+    let video;
+    try {
+      const videos = await youtube.searchVideos(args.join(" "), 10);
+      let index = 0;
+      const embed = new Discord.MessageEmbed()
+        .setAuthor("Song Selection")
+        .setDescription(`${videos.map(video2 => `**${++index} -** ${video2.title}`).join("\n")}`)
+        .setFooter("Please provide a value to select one of the search results ranging from 1-10.")
+        .setColor(message.guild.me.roles.highest.color || 0x00AE86);
+      message.channel.send({ embed: embed });
+      const response = await message.channel.awaitMessages(msg2 => (msg2.content > 0 &amp;&amp; msg2.content &lt; 11) &amp;&amp; msg2.author.id === message.author.id, {
+        max: 1,
+        time: 10000,
+        errors: ["time"]
+      });
+      if (!response) return client.embed("invalidEntry", message);
+      const videoIndex = parseInt(response.first().content);
+      video = await youtube.getVideoByID(videos[videoIndex - 1].id);
+    } catch (err) {
+      return client.embed("noSearchResults", message);
+    }
+    return handleVideo(video, message, voiceChannel);
+  }
+
+  /**
+   * @param {DiscordClient} client The discord.js client
+   * @param {DiscordMessage} message The message sent, a discord.js message object
+   * @description If there is a queue, this will clear it and leave the voice channel
+   */
+
+
+  stop(client, message) {
+    if (message.member.hasPermission("ADMINISTRATOR")) {
+      const voiceChannel = message.member.voiceChannel;
+      if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+      if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
+      const thisPlaylist = this.client.playlists.get(message.guild.id);
+      thisPlaylist.songs = [];
+      thisPlaylist.connection.dispatcher.end();
+      return this.client.embed("stopped", message);
+    } else {
+      return this.client.embed("noPerms-ADMINISTRATOR", message);
+    }
+  }
+
+  /**
+   * @param {DiscordClient} client The discord.js client
+   * @param {DiscordMessage} message The message sent, a discord.js message object
+   * @param {Array} [args = []] The arguments, look at the example for more information
+   * @description This will set the volume of the current queue
+   */
+
+
+  volume(client, message, args) {
+    if (message.member.hasPermission("ADMINISTRATOR")) {
+      const voiceChannel = message.member.voiceChannel;
+      if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+      if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
+      if (!args[0]) return this.client.embed("currentVolume", message);
+      if (Number(args[0]) &lt; 0 || Number(args[0]) > 100) return this.client.embed("errorVolume", message);
+      message.guild.voiceConnection.volume = Number(args[0]) / 100;
+      this.client.playlists.get(message.guild.id).volume = Number(args[0]);
+      this.client.playlists.get(message.guild.id).connection.dispatcher.setVolumeLogarithmic(Number(args[0]) / 100);
+      return this.client.embed("volumeSet", message, args);  
+    } else {
+      return this.client.embed("noPerms-ADMINISTRATOR", message);
+    }
   }
 }
 
@@ -258,7 +366,7 @@ module.exports = Music;
 <br class="clear">
 
 <footer>
-    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Mar 18 2018 14:33:56 GMT+0000 (GMT Standard Time) using the Minami theme.
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Mar 18 2018 22:11:33 GMT+0000 (GMT Standard Time) using the Minami theme.
 </footer>
 
 <script>prettyPrint();</script>
