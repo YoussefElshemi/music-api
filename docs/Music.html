@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Music - Documentation</title>
 
     <script src="scripts/prettify/prettify.js"></script>
@@ -9,8 +10,9 @@
     <!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
-    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
-    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <link type="text/css" rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
 </head>
 <body>
 
@@ -22,7 +24,7 @@
 <label for="nav-trigger" class="overlay"></label>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Music.html">Music</a></li></ul><h3>Global</h3><ul><li><a href="global.html#embed">embed</a></li><li><a href="global.html#handleVideo">handleVideo</a></li></ul>
+    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Music.html">Music</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#embed">embed</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#handleVideo">handleVideo</a></span></li>
 </nav>
 
 <div id="main">
@@ -50,6 +52,7 @@
     <div class="container-overview">
     
         
+<div class="section-method">
 
     
 
@@ -60,7 +63,34 @@
 
 
 
+
+
+
 <dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 
     
     <dt class="tag-source">Source:</dt>
@@ -74,49 +104,12 @@
     
 
     
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
 </dl>
 
 
 
 
 
-
-
-
-
-
-
-
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>// an example of initiating the music client
-const MusicApi = require("doyle-music");
-const API = new MusicAPI(client, "yt api token", { "prefix": "!", "anyoneCanSkip": true });</code></pre>
 
 
 
@@ -156,7 +149,7 @@ const API = new MusicAPI(client, "yt api token", { "prefix": "!", "anyoneCanSkip
             <td class="type">
             
                 
-<span class="param-type">Client</span>
+<span class="param-type"><code>Client</code></span>
 
 
             
@@ -178,7 +171,10 @@ const API = new MusicAPI(client, "yt api token", { "prefix": "!", "anyoneCanSkip
                 </td>
             
 
-            <td class="description last">The Discord.JS client</td>
+            <td class="description last">
+                The Discord.JS client
+                
+            </td>
         </tr>
 
     
@@ -191,7 +187,7 @@ const API = new MusicAPI(client, "yt api token", { "prefix": "!", "anyoneCanSkip
             <td class="type">
             
                 
-<span class="param-type">String</span>
+<span class="param-type"><code>String</code></span>
 
 
             
@@ -213,7 +209,10 @@ const API = new MusicAPI(client, "yt api token", { "prefix": "!", "anyoneCanSkip
                 </td>
             
 
-            <td class="description last">Youtube API Token</td>
+            <td class="description last">
+                Youtube API Token
+                
+            </td>
         </tr>
 
     
@@ -226,7 +225,7 @@ const API = new MusicAPI(client, "yt api token", { "prefix": "!", "anyoneCanSkip
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type"><code>Object</code></span>
 
 
             
@@ -247,12 +246,15 @@ const API = new MusicAPI(client, "yt api token", { "prefix": "!", "anyoneCanSkip
             
                 <td class="default">
                 
-                    <code>{}</code>
+                    {}
                 
                 </td>
             
 
-            <td class="description last">The options to pass</td>
+            <td class="description last">
+                The options to pass
+                
+            </td>
         </tr>
 
     
@@ -274,6 +276,16 @@ const API = new MusicAPI(client, "yt api token", { "prefix": "!", "anyoneCanSkip
 
 
 
+<div class="section-examples">
+<h5>Example</h5>
+
+    <pre class="prettyprint"><code>// an example of initiating the music client
+const MusicApi = require("doyle-music");
+const API = new MusicAPI(client, "yt api token", { prefix: "!", anyoneCanSkip: true });</code></pre>
+
+</div>
+
+</div>
     
     </div>
 
@@ -306,7 +318,7 @@ const API = new MusicAPI(client, "yt api token", { "prefix": "!", "anyoneCanSkip
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Mar 18 2018 03:26:53 GMT+0000 (GMT Standard Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Mar 18 2018 14:33:56 GMT+0000 (GMT Standard Time) using the Minami theme.
 </footer>
 
 <script>prettyPrint();</script>
