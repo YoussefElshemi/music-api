@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>modules/musichandling.js - Documentation</title>
+
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Music.html">Music</a></li></ul><h3>Global</h3><ul><li><a href="global.html#embed">embed</a></li><li><a href="global.html#handleVideo">handleVideo</a></li></ul>
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">modules/musichandling.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const { MessageEmbed, Util } = require("discord.js");
+const ytdl = require("ytdl-core");
+
+/**
+ * @param {YoutubeVideo} video The youtube video obtained using simple-youtube-api
+ * @param {DiscordMessage} message The discord message 
+ * @param {DiscordChannel} voiceChannel The user's voice channel
+ * @param {Boolean} [playlist=false] If it's a playlist or not
+ */
+
+const handleVideo = async (video, message, voiceChannel, playlist = false) => {
+  const checker = message.client.setInterval(() => {
+    if (voiceChannel.members.filter(c => !c.user.bot).size === 0) {
+      message.client.embed("inactiveCall", message);
+      message.client.clearInterval(checker);
+      message.client.playlists.get(message.guild.id).songs = [];
+      message.client.playlists.get(message.guild.id).connection.dispatcher.end();
+      return voiceChannel.leave();
+    }
+  }, 10000);
+  const queue = message.client.playlists; 
+  const song = {
+    id: video.id,
+    title: Util.escapeMarkdown(video.title),
+    url: `https://www.youtube.com/watch?v=${video.id}`,
+    channel: video.channel.title,
+    channelurl: `https://www.youtube.com/channel/${video.channel.id}`,
+    durationh: video.duration.hours,
+    durationm: video.duration.minutes,
+    durations: video.duration.seconds,
+    thumbnail: video.thumbnails.default.url,
+    author: message.author.username,
+  };
+  if (!queue.has(message.guild.id)) {
+    const queueConstruct = {
+      textChannel: message.channel,
+      voiceChannel: voiceChannel,
+      connection: null,
+      songs: [],
+      volume: 5,
+      playing: true,
+      loop: false
+    };
+    queue.set(message.guild.id, queueConstruct);
+    queueConstruct.songs.push(song);
+    try {
+      const connection = await voiceChannel.join();
+      queueConstruct.connection = connection;
+      play(message.guild, queueConstruct.songs[0]);
+    } catch (error) {
+      queue.delete(message.guild.id);
+      const embed = new MessageEmbed()
+        .setAuthor("Error")
+        .setDescription(`An error has occured: ${error}`)
+        .setColor(message.guild.me.roles.highest.color || 0x00AE86);
+      return message.channel.send(embed);
+    }
+  } else {
+    queue.get(message.guild.id).songs.push(song);
+    if (playlist) return;
+    else {
+      const embed = new MessageEmbed()
+        .setAuthor("Song added!")
+        .setDescription(`✅ **${song.title}** has been added to the queue!`)
+        .setColor(message.guild.me.roles.highest.color || 0x00AE86);
+      return message.channel.send(embed);
+    }
+  }
+  return;
+};
+  
+function play(guild, song) {
+  const queue = guild.client.playlists;
+  const serverQueue = queue.get(guild.id);
+  if (!song) {
+    serverQueue.voiceChannel.leave();
+    queue.delete(guild.id);
+    return;
+  }
+  const dispatcher = queue.get(guild.id).connection.play(ytdl(song.url))
+    .on("end", () => {
+      if (!serverQueue.loop) {
+        queue.get(guild.id).songs.shift();
+        setTimeout(() => {
+          play(guild, queue.get(guild.id).songs[0]);
+        }, 250); 
+      } else {
+        setTimeout(() => {
+          play(guild, queue.get(guild.id).songs[0]);
+        }, 250);		   
+      }
+    });
+  dispatcher.setVolumeLogarithmic(queue.get(guild.id).volume / 5);
+  const songdurm = String(song.durationm).padStart(2, "0");
+  const songdurh = String(song.durationh).padStart(2, "0");
+  const songdurs = String(song.durations).padStart(2, "0");
+  
+  const embed = new MessageEmbed()
+    .setTitle(song.channel)
+    .setURL(song.channelurl)
+    .setThumbnail(song.thumbnail)
+    .setDescription(`[${song.title}](${song.url})`)
+    .addField("__Duration__",`${songdurh}:${songdurm}:${songdurs}`, true)
+    .addField("__Requested by__", song.author, true)
+    .setColor(guild.member(guild.client.user.id).roles.highest.color || 0x00AE86);
+  if (!serverQueue.loop) return queue.get(guild.id).textChannel.send(embed);
+}
+
+module.exports = handleVideo;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Mar 18 2018 03:12:21 GMT+0000 (GMT Standard Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/linenumber.js"></script>
+</body>
+</html>
