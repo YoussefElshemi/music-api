@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>index.js - Documentation</title>
+
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Music.html">Music</a></li></ul><h3>Global</h3><ul><li><a href="global.html#embed">embed</a></li><li><a href="global.html#handleVideo">handleVideo</a></li></ul>
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">index.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const Discord = require("discord.js");
+const youtube = require("simple-youtube-api");
+const handleVideo = require("./modules/MusicHandling.js");
+
+class Music {
+
+  /**
+    * @param {Client} client The Discord.JS client
+    * @param {String} token Youtube API Token
+    * @param  {Object} [options = {}] The options to pass
+    * @example
+    * // an example of initiating the music client
+    * const MusicApi = require("discord.js-music-v12");
+    * const API = new MusicAPI(client, "yt api token", { "prefix": "!", "anyoneCanSkip": true });
+    */
+
+  constructor(client, token, options) {
+    if (!client) throw new Error("You must pass a discord.js client!");
+    if (typeof client !== "object") throw new Error("Client must be an actual client!");
+    this.client = client;
+    this.client.embed = require("./modules/Embeds.js");
+    if (!token.length) throw new Error("YT API Token is required!");
+    if (typeof token !== "string") throw new Error("Token must be a string!");
+    this.token = token;
+    this.prefix = (options &amp;&amp; options.prefix) || "!";
+    this.anyoneCanSkip = (options &amp;&amp; options.anyoneCanSkip) || false;
+    if (options &amp;&amp; typeof options !== "object") throw new Error("Options must be an object!");
+    this.ytapi = new youtube(token);
+    this.client.playlists = new Discord.Collection();
+
+    this.client.on("ready", () => {
+      console.log("Music BOT is on!");
+    });
+
+    this.client.on("message", async message => {
+      if (!message.content.startsWith(this.prefix)) return;
+      let args = message.content.split(" ");
+      const command = args[0].slice(this.prefix.length);
+      args = args.join(" ").slice(command.length + this.prefix.length).trim().split(" ");
+
+
+      if (command === "play") {
+        const url = args[0] ? args[0].replace(/&lt;(.+)>/g, "$1") : "";
+        const voiceChannel = message.member.voiceChannel;
+        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+        if (!args[0]) return this.client.embed("noArgs", message);
+        const permissions = voiceChannel.permissionsFor(message.client.user);
+        if (!permissions.has("CONNECT")) return this.client.embed("noPerms-CONNECT", message);
+        if (!permissions.has("SPEAK")) return this.client.embed("noPerms-SPEAK", message);
+        if (url.match(/^https?:\/\/(www.youtube.com|youtube.com)\/playlist(.*)$/)) {
+          const playlist = await this.ytapi.getPlaylist(url);
+          const videos = await playlist.getVideos();
+          for (const video of Object.values(videos)) {
+            const video2 = await this.ytapi.getVideoByID(video.id); // eslint-disable-line no-await-in-loop
+            await handleVideo(video2, message, voiceChannel, true); // eslint-disable-line no-await-in-loop
+          }
+          const embed = new Discord.MessageEmbed()
+            .setAuthor("Playlist")
+            .setDescription(`✅ Playlist: **${playlist.title}** has been added to the queue!`)
+            .setColor(message.guild.me.roles.highest.color || 0x00AE86);
+          message.channel.send(embed);
+        } else {
+          let video;
+          try {
+            video = await this.ytapi.getVideo(url);
+          } catch (error) {
+            const videos = await this.ytapi.searchVideos(args.join(" "), 1);
+            video = await this.ytapi.getVideoByID(videos[0].id);   
+          }
+          return handleVideo(video, message, voiceChannel);
+        }
+      }
+
+      if (command === "skip") {
+        const voiceChannel = message.member.voiceChannel;
+        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
+        const thisPlaylist = this.client.playlists.get(message.guild.id);
+        thisPlaylist.loop = false;
+        thisPlaylist.connection.dispatcher.end("skip");
+        return this.client.embed("stopped", message);
+      }
+
+      if (command === "loop" || command === "unloop") {
+        const voiceChannel = message.member.voiceChannel;
+        const thisPlaylist = this.client.playlists.get(message.guild.id);
+        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
+        if (thisPlaylist.loop) {
+          thisPlaylist.loop = false;
+          return this.client.embed("unloopedEmbed", message);
+        } else {
+          thisPlaylist.loop = true;
+          return this.client.embed("loopedEmbed", message);
+        }
+      }
+
+      if (command === "np" || command === "nowplaying" || command === "currentsong") {
+        const voiceChannel = message.member.voiceChannel;
+        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
+        return this.client.embed("nowPlaying", message);
+      }
+
+      if (command === "queue" || command === "playlist") {
+        const voiceChannel = message.member.voiceChannel;
+        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
+        return this.client.embed("queueEmbed", message);
+      }
+
+      if (command === "pause") {
+        const voiceChannel = message.member.voiceChannel;
+        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);    
+        const thisPlaylist = this.client.playlists.get(message.guild.id);
+        if (!thisPlaylist.playing) return this.client.embed("alreadyPaused", message);   
+        thisPlaylist.playing = false;
+        thisPlaylist.connection.dispatcher.pause();
+        return this.client.embed("paused", message);   
+      }
+
+      if (command === "resume") {
+        const voiceChannel = message.member.voiceChannel;
+        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
+        const thisPlaylist = this.client.playlists.get(message.guild.id);
+        if (thisPlaylist.playing) return this.client.embed("alreadyResumed", message);
+        thisPlaylist.playing = true;
+        thisPlaylist.connection.dispatcher.resume();
+        return this.client.embed("resumed", message);
+      } 
+
+      if (command === "search") {
+        const voiceChannel = message.member.voiceChannel;
+        const permissions = voiceChannel.permissionsFor(message.client.user);
+        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+        if (!args[0]) return this.client.embed("noArgs", message);
+        if (!permissions.has("CONNECT")) return this.client.embed("noPerms-CONNECT", message);
+        if (!permissions.has("SPEAK")) return this.client.embed("noPerms-SPEAK");
+        let video;
+        try {
+          const videos = await youtube.searchVideos(args.join(" "), 10);
+          let index = 0;
+          const embed = new Discord.MessageEmbed()
+            .setAuthor("Song Selection")
+            .setDescription(`${videos.map(video2 => `**${++index} -** ${video2.title}`).join("\n")}`)
+            .setFooter("Please provide a value to select one of the search results ranging from 1-10.")
+            .setColor(message.guild.me.roles.highest.color || 0x00AE86);
+          message.channel.send(embed);
+          const response = await message.channel.awaitMessages(msg2 => (msg2.content > 0 &amp;&amp; msg2.content &lt; 11) &amp;&amp; msg2.author.id === message.author.id, {
+            max: 1,
+            time: 10000,
+            errors: ["time"]
+          });
+          if (!response) return this.client.embed("invalidEntry", message);
+          const videoIndex = parseInt(response.first().content);
+          video = await youtube.getVideoByID(videos[videoIndex - 1].id);
+        } catch (err) {
+          return this.client.embed("noSearchResults", message);
+        }
+        return handleVideo(video, message, voiceChannel);
+      }
+
+      if (command === "stop") {
+        const voiceChannel = message.member.voiceChannel;
+        if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+        if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
+        const thisPlaylist = this.client.playlists.get(message.guild.id);
+        thisPlaylist.songs = [];
+        thisPlaylist.connection.dispatcher.end();
+        return this.client.embed("stopped", message);
+      }
+      if (command === "volume") {
+        if (this.anyoneCanSkip) { 
+          const voiceChannel = message.member.voiceChannel;
+          if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+          if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
+          if (!args[0]) return this.client.embed("currentVolume", message);
+          if (Number(args[0]) &lt; 0 || Number(args[0]) > 100) return this.client.embed("errorVolume", message);
+          message.guild.voiceConnection.volume = Number(args[0]) / 100;
+          this.client.playlists.get(message.guild.id).volume = Number(args[0]);
+          this.client.playlists.get(message.guild.id).connection.dispatcher.setVolumeLogarithmic(Number(args[0]) / 100);
+          return this.client.embed("volumeSet", message, args);
+        } else {
+          if (message.member.hasPermission("ADMINISTRATOR")) {
+            const voiceChannel = message.member.voiceChannel;
+            if (!voiceChannel) return this.client.embed("noVoiceChannel", message);
+            if (!this.client.playlists.has(message.guild.id)) return this.client.embed("emptyQueue", message);
+            if (!args[0]) return this.client.embed("currentVolume", message);
+            if (Number(args[0]) &lt; 0 || Number(args[0]) > 100) return this.client.embed("errorVolume", message);
+            message.guild.voiceConnection.volume = Number(args[0]) / 100;
+            this.client.playlists.get(message.guild.id).volume = Number(args[0]);
+            this.client.playlists.get(message.guild.id).connection.dispatcher.setVolumeLogarithmic(Number(args[0]) / 100);
+            return this.client.embed("volumeSet", message, args);  
+          }
+        }
+      }
+    });
+  }
+}
+
+module.exports = Music;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Sun Mar 18 2018 03:26:53 GMT+0000 (GMT Standard Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/linenumber.js"></script>
+</body>
+</html>
